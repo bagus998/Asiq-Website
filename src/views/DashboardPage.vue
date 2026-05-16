@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { logoUrl } from '../constants'
 import { supabase } from '../lib/supabase'
 import { useRouter } from 'vue-router'
-import { processAdaptiveLearning } from '../services/ai'
+import { generateRPP, checkStatus, getResult, downloadPDF } from '../services/rppApi'
 import { 
   LayoutDashboard, FolderOpen, GraduationCap, 
   Users, Library, Search, Bell, Settings, 
@@ -86,76 +86,115 @@ const stats = [
 ]
 
 const recentRPP = ref({
-  title: 'Hasil Adaptasi RPP',
-  subText: 'Multi-agent analysis finished',
-  readability: 85,
-  accessibility: 85,
-  strengths: [
-    { title: 'Cognitive Alignment', desc: 'Learning objectives are clearly mapped.' }
-  ],
-  resources: [
-    { name: 'Interactive Virtual Lab', type: 'Simulation', icon: FileText }
-  ]
+  title: '',
+  subText: '',
+  readability: 0,
+  accessibility: 0,
+  strengths: [] as Array<{ title: string; desc: string }>,
+  resources: [] as Array<{ name: string; type: string; icon: any }>,
+  pdf_url: null as string | null,
 })
 
 const rppStep = ref(1)
+const namaSiswa = ref('')
+const currentJobId = ref<string | null>(null)
+const currentStep = ref('')
+let pollingInterval: ReturnType<typeof setInterval> | null = null
+
+onUnmounted(() => { if (pollingInterval) clearInterval(pollingInterval) })
 
 const startRPP = () => { activeTab.value = 'rpp-form' }
-const processRPP = async () => { 
-  if (!rawMaterial.value || !studentProfile.value || !selectedJenjang.value || !selectedMataPelajaran.value || !selectedDisabilitas.value || !selectedPertemuan.value) {
-    alert("Mohon lengkapi semua isian formulir (Jenjang, Mata Pelajaran, Jumlah Pertemuan, Disabilitas, Materi Mentah, dan Identifikasi Murid) terlebih dahulu.");
-    return;
-  }
-  activeTab.value = 'processing'
-  
-  const fullProfile = `Jenjang/Tingkat: ${selectedJenjang.value}
-Mata Pelajaran: ${selectedMataPelajaran.value}
-Jumlah Pertemuan: ${selectedPertemuan.value}
-Disabilitas: ${selectedDisabilitas.value}
 
-Karakteristik Murid:
-${studentProfile.value}`;
+const processRPP = async () => {
+  if (!namaSiswa.value || !selectedJenjang.value || !selectedMataPelajaran.value || !selectedDisabilitas.value) {
+    alert('Mohon lengkapi Nama Siswa, Jenjang, Mata Pelajaran, dan Disabilitas terlebih dahulu.')
+    return
+  }
+  currentStep.value = ''
+  activeTab.value = 'processing'
 
   try {
-    const result = await processAdaptiveLearning({
-      rawMaterial: rawMaterial.value,
-      studentProfile: studentProfile.value,
-      jenjang: selectedJenjang.value,
-      mataPelajaran: selectedMataPelajaran.value,
-      pertemuan: selectedPertemuan.value,
-      disabilitas: selectedDisabilitas.value
-    });
-    
-    // Save to Supabase DB
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (sessionData.session) {
-      await supabase.from('materials').insert({
-        user_id: sessionData.session.user.id,
-        raw_content: rawMaterial.value,
-        student_profile: studentProfile.value,
-        strategy: result.strategy,
-        adapted_content: result.adaptedMaterial,
-        readability_score: result.readabilityScore,
-        accessibility_score: result.accessibilityScore,
-        strengths: result.strengths,
-        resources: result.resources
-      });
-    }
+    const job = await generateRPP({
+      nama_siswa: namaSiswa.value,
+      kelas: selectedJenjang.value,
+      mata_pelajaran: selectedMataPelajaran.value,
+      gejala: selectedDisabilitas.value + (studentProfile.value ? ': ' + studentProfile.value : ''),
+      materi_mentah: rawMaterial.value || undefined,
+    })
+    currentJobId.value = job.job_id
 
-    recentRPP.value = {
-      title: 'Hasil Adaptasi AI',
-      subText: result.strategy.substring(0, 100) + '...',
-      readability: result.readabilityScore,
-      accessibility: result.accessibilityScore,
-      strengths: result.strengths,
-      resources: result.resources.map((r: any) => ({...r, icon: FileText}))
-    };
+    pollingInterval = setInterval(async () => {
+      try {
+        const status = await checkStatus(job.job_id)
+        currentStep.value = status.step
+        const s = status.status.toLowerCase()
+        if (s === 'completed' || s === 'done' || s === 'finished') {
+          clearInterval(pollingInterval!); pollingInterval = null
+          const r = await getResult(job.job_id)
 
-    activeTab.value = 'results'
-  } catch (error: any) {
-    console.error("Error processing AI:", error);
-    alert("Terjadi kesalahan saat memproses data: " + (error?.message || error));
+          recentRPP.value = {
+            title: `RPP Inklusif — ${r.nama_siswa}`,
+            subText: `${r.mata_pelajaran} · ${r.kelas}`,
+            readability: r.readability_score,
+            accessibility: r.wcag_score,
+            strengths: [
+              { title: 'Profil Siswa', desc: r.profiling },
+              { title: 'Strategi Adaptif', desc: r.adaptive },
+            ],
+            resources: [{ name: 'Insight AI', type: r.insight, icon: FileText }],
+            pdf_url: r.pdf_url,
+          }
+
+          // Simpan ke Supabase
+          const { data: sessionData } = await supabase.auth.getSession()
+          if (sessionData.session) {
+            await supabase.from('materials').insert({
+              user_id: sessionData.session.user.id,
+              raw_content: rawMaterial.value,
+              student_profile: studentProfile.value,
+              readability_score: r.readability_score,
+              accessibility_score: r.wcag_score,
+            })
+          }
+
+          activeTab.value = 'results'
+        } else if (s === 'failed' || s === 'error') {
+          clearInterval(pollingInterval!); pollingInterval = null
+          alert('Terjadi kesalahan saat memproses RPP. Coba lagi.')
+          activeTab.value = 'rpp-form'
+        }
+      } catch (e: any) {
+        clearInterval(pollingInterval!); pollingInterval = null
+        alert('Error: ' + e.message)
+        activeTab.value = 'rpp-form'
+      }
+    }, 2000)
+  } catch (e: any) {
+    alert('Gagal menghubungi API: ' + e.message)
     activeTab.value = 'rpp-form'
+  }
+}
+
+const handleDownload = async () => {
+  if (recentRPP.value.pdf_url) {
+    const a = document.createElement('a')
+    a.href = recentRPP.value.pdf_url
+    a.download = 'RPP.pdf'
+    a.target = '_blank'
+    a.click()
+    return
+  }
+  if (!currentJobId.value) return
+  try {
+    const blob = await downloadPDF(currentJobId.value)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'RPP.pdf'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e: any) {
+    alert('Gagal download: ' + e.message)
   }
 }
 </script>
@@ -411,6 +450,17 @@ ${studentProfile.value}`;
 
             <div class="space-y-6">
               <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">Detail App</p>
+
+              <div class="space-y-4">
+                <label class="block text-sm font-bold text-slate-900">Nama Siswa *</label>
+                <input
+                  v-model="namaSiswa"
+                  type="text"
+                  placeholder="Contoh: Budi Santoso"
+                  class="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-blue-600 transition-all text-sm text-slate-600"
+                />
+              </div>
+
               <div class="grid md:grid-cols-2 gap-6">
                 <div class="space-y-4">
                   <label class="block text-sm font-bold text-slate-900">Jenjang/Tingkat</label>
@@ -542,7 +592,7 @@ ${studentProfile.value}`;
                   <button class="px-5 py-3 border-2 border-blue-100 rounded-xl text-blue-600 font-extrabold flex items-center gap-2 hover:bg-blue-50 transition-all">
                     <PenTool class="w-4 h-4" /> Edit RPP
                   </button>
-                  <button class="px-5 py-3 bg-blue-600 text-white rounded-xl font-extrabold flex items-center gap-2 hover:shadow-xl hover:shadow-blue-200 transition-all">
+                  <button @click="handleDownload" class="px-5 py-3 bg-blue-600 text-white rounded-xl font-extrabold flex items-center gap-2 hover:shadow-xl hover:shadow-blue-200 transition-all">
                     <Download class="w-4 h-4" /> Unduh PDF
                   </button>
                   <button class="p-3 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all">
