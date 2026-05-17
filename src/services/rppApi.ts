@@ -1,5 +1,5 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL as string
-const API_KEY = import.meta.env.VITE_API_KEY as string
+const BASE_URL = '' // use proxy in both local (vite) and prod (vercel)
+const API_KEY = import.meta.env.VITE_ASIQ_API_KEY as string
 
 function apiHeaders(): Record<string, string> {
   return { 'X-API-Key': API_KEY }
@@ -62,16 +62,22 @@ export async function generateRPP(data: RPPGenerateRequest, file?: File | null):
 }
 
 export async function checkStatus(jobId: string): Promise<RPPStatusResponse> {
-  const res = await fetch(`${BASE_URL}/api/rpp/status/${jobId}`, {
-    headers: apiHeaders(),
+  const res = await fetch(`${BASE_URL}/api/rpp/status/${jobId}?t=${Date.now()}`, {
+    headers: {
+      ...apiHeaders(),
+      'Cache-Control': 'no-cache',
+    },
   })
   if (!res.ok) throw new Error(`Cek status gagal: ${res.status}`)
   return res.json()
 }
 
 export async function getResult(jobId: string): Promise<RPPResultResponse> {
-  const res = await fetch(`${BASE_URL}/api/rpp/result/${jobId}`, {
-    headers: apiHeaders(),
+  const res = await fetch(`${BASE_URL}/api/rpp/result/${jobId}?t=${Date.now()}`, {
+    headers: {
+      ...apiHeaders(),
+      'Cache-Control': 'no-cache',
+    },
   })
   if (!res.ok) throw new Error(`Ambil hasil gagal: ${res.status}`)
   return res.json()

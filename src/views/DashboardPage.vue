@@ -106,8 +106,8 @@ onUnmounted(() => { if (pollingInterval) clearInterval(pollingInterval) })
 const startRPP = () => { activeTab.value = 'rpp-form' }
 
 const processRPP = async () => {
-  if (!namaSiswa.value || !selectedJenjang.value || !selectedMataPelajaran.value || !selectedDisabilitas.value) {
-    alert('Mohon lengkapi Nama Siswa, Jenjang, Mata Pelajaran, dan Disabilitas terlebih dahulu.')
+  if (!rawMaterial.value || !namaSiswa.value || !selectedJenjang.value || !selectedMataPelajaran.value || !selectedDisabilitas.value) {
+    alert('Mohon lengkapi Materi Mentah, Nama Siswa, Jenjang, Mata Pelajaran, dan Disabilitas terlebih dahulu.')
     return
   }
   currentStep.value = ''
