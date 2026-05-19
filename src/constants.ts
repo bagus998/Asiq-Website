@@ -1,3 +1,3 @@
 import { ref } from "vue";
 
-export const logoUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRRut5SkIou3HDg_NMpwbcLK8VH08jZSa1jDw&s";
+export const logoUrl = "https://cdn.siap.id/s3/Asvri%20Adaptive%20Learning/Logo_master_ASIQ.svg?v=20260218";

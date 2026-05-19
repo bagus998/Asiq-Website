@@ -1,27 +1,20 @@
-export async function processAdaptiveLearning(params: {
-  rawMaterial: string;
-  studentProfile: string;
-  jenjang: string;
-  mataPelajaran: string;
-  pertemuan: string;
-  disabilitas: string;
-}) {
+export async function processAdaptiveLearning(params: { rawMaterial: string; studentProfile: string; jenjang: string; mataPelajaran: string; pertemuan: string; disabilitas: string }) {
   const isProd = import.meta.env.PROD;
-  const asiqApiUrl = isProd ? '' : (import.meta.env.VITE_ASIQ_API_URL || 'http://13.212.231.53:8000');
-  const asiqApiKey = import.meta.env.VITE_ASIQ_API_KEY || 'asiq-prod-2026-secret';
+  const asiqApiUrl = isProd ? "" : import.meta.env.VITE_ASIQ_API_URL || "http://13.212.231.53:8000";
+  const asiqApiKey = import.meta.env.VITE_ASIQ_API_KEY || "asiq-prod-2026-secret";
 
   const formData = new FormData();
-  formData.append('nama_siswa', 'Siswa');
-  formData.append('kelas', params.jenjang);
-  formData.append('mata_pelajaran', params.mataPelajaran);
-  formData.append('gejala', params.disabilitas + (params.studentProfile ? ', ' + params.studentProfile : ''));
-  formData.append('materi_mentah', params.rawMaterial);
+  formData.append("nama_siswa", "Siswa");
+  formData.append("kelas", params.jenjang);
+  formData.append("mata_pelajaran", params.mataPelajaran);
+  formData.append("gejala", params.disabilitas + (params.studentProfile ? ", " + params.studentProfile : ""));
+  formData.append("materi_mentah", params.rawMaterial);
 
   // 1. Generate Request
   const generateRes = await fetch(`${asiqApiUrl}/api/rpp/generate`, {
-    method: 'POST',
-    headers: { 'X-API-Key': asiqApiKey },
-    body: formData
+    method: "POST",
+    headers: { "X-API-Key": asiqApiKey },
+    body: formData,
   });
 
   if (!generateRes.ok) {
@@ -36,33 +29,31 @@ export async function processAdaptiveLearning(params: {
   }
 
   // 2. Poll Status
-  let status = 'processing';
-  while (status === 'processing' || status === 'pending') {
-    await new Promise(r => setTimeout(r, 3000));
+  let status = "processing";
+  while (status === "processing" || status === "pending") {
+    await new Promise((r) => setTimeout(r, 3000));
     const statusRes = await fetch(`${asiqApiUrl}/api/rpp/status/${jobId}`, {
-      headers: { 'X-API-Key': asiqApiKey }
+      headers: { "X-API-Key": asiqApiKey },
     });
     const statusData = await statusRes.json();
     status = statusData.status;
 
-    if (status === 'failed') {
-      let errorMessage = "Proses gagal: " + (statusData.step || 'Unknown');
+    if (status === "failed") {
+      let errorMessage = "Proses gagal: " + (statusData.step || "Unknown");
       try {
         const errRes = await fetch(`${asiqApiUrl}/api/rpp/result/${jobId}`, {
-          headers: { 'X-API-Key': asiqApiKey }
+          headers: { "X-API-Key": asiqApiKey },
         });
         const errData = await errRes.json();
         if (errData.detail) errorMessage = errData.detail;
-      } catch (e) {
-        // ignore error fetching detail
-      }
+      } catch (e) {}
       throw new Error(errorMessage);
     }
   }
 
   // 3. Get Result
   const resultRes = await fetch(`${asiqApiUrl}/api/rpp/result/${jobId}`, {
-    headers: { 'X-API-Key': asiqApiKey }
+    headers: { "X-API-Key": asiqApiKey },
   });
   const resultData = await resultRes.json();
 
@@ -75,11 +66,7 @@ export async function processAdaptiveLearning(params: {
     adaptedMaterial,
     readabilityScore: resultData.readability_score || 85,
     accessibilityScore: resultData.accessibility_score || 85,
-    strengths: resultData.strengths || [
-        { title: 'Adaptive Pacing', desc: 'The material is broken down into manageable chunks.' }
-    ],
-    resources: resultData.resources || [
-        { name: 'Interactive Practice', type: 'Worksheet' }
-    ]
+    strengths: resultData.strengths || [{ title: "Adaptive Pacing", desc: "The material is broken down into manageable chunks." }],
+    resources: resultData.resources || [{ name: "Interactive Practice", type: "Worksheet" }],
   };
 }
