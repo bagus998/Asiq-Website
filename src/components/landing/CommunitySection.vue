@@ -1,72 +1,113 @@
 <script setup lang="ts">
-import { Zap, School, ArrowRight } from 'lucide-vue-next'
+import { Zap, School, ArrowRight, ChevronLeft, ChevronRight } from "lucide-vue-next";
+import { ref, onMounted, onUnmounted } from "vue";
 
 const events = [
   {
-    title: 'Pembelajaran Mendalam Kota Malang',
-    date: 'Selasa, 5 Agustus 2025',
-    loc: 'Ruang Dr. Sutomo, Kota Malang',
-    source: 'Dinas Pendidikan & Kebudayaan Kota Malang',
-    img: 'https://cdn.siap.id/s3/Asvri%20Adaptive%20Learning/dinas.jpg'
+    title: "Pembelajaran Mendalam Kota Malang",
+    date: "Selasa, 5 Agustus 2025",
+    loc: "Ruang Dr. Sutomo, Kota Malang",
+    source: "Dinas Pendidikan & Kebudayaan Kota Malang",
+    img: "https://cdn.siap.id/s3/Asvri%20Adaptive%20Learning/Event/dinas.jpg?auto=compress&cs=tinysrgb&v=20260218",
   },
   {
-    title: 'Pelatihan ASVRI EDU - Charis National Academy',
-    date: '5-10 Agustus 2025',
-    loc: 'Charis National Academy',
-    source: 'Instagram ASIQ',
-    img: 'https://cdn.siap.id/s3/Asvri%20Adaptive%20Learning/charis.jpg'
+    title: "Pelatihan ASVRI EDU - Charis National Academy",
+    date: "5-10 Agustus 2025",
+    loc: "Charis National Academy",
+    source: "Instagram ASIQ",
+    img: "https://cdn.siap.id/s3/Asvri%20Adaptive%20Learning/Event/charis.jpg?auto=compress&cs=tinysrgb&v=20260218",
   },
   {
-    title: 'Pelatihan ASVRI EDU - SD Plus Al Kautsar Malang',
-    date: '5-10 Agustus 2025',
-    loc: 'SD Plus Al Kautsar Malang',
-    source: 'Instagram ASIQ',
-    img: 'https://cdn.siap.id/s3/Asvri%20Adaptive%20Learning/alkautsar.jpg'
+    title: "Pelatihan ASVRI EDU - SD Plus Al Kautsar Malang",
+    date: "5-10 Agustus 2025",
+    loc: "SD Plus Al Kautsar Malang",
+    source: "Instagram ASIQ",
+    img: "https://cdn.siap.id/s3/Asvri%20Adaptive%20Learning/Event/kauman.png?auto=compress&cs=tinysrgb&v=20260218",
+  },
+];
+
+// State untuk melacak gambar yang sedang aktif
+const currentIndex = ref(0);
+let autoPlayInterval: ReturnType<typeof setInterval> | null = null;
+
+// Fungsi untuk pindah ke slide berikutnya
+const nextSlide = () => {
+  currentIndex.value = (currentIndex.value + 1) % events.length;
+};
+
+// Fungsi untuk mundur ke slide sebelumnya
+const prevSlide = () => {
+  currentIndex.value = (currentIndex.value - 1 + events.length) % events.length;
+};
+
+// Fungsi untuk memulai autoplay (ganti gambar setiap 3 detik)
+const startAutoPlay = () => {
+  autoPlayInterval = setInterval(nextSlide, 3000);
+};
+
+// Fungsi untuk menghentikan autoplay
+const stopAutoPlay = () => {
+  if (autoPlayInterval) {
+    clearInterval(autoPlayInterval);
+    autoPlayInterval = null;
   }
-]
+};
+
+// Jalankan autoplay saat komponen dimuat
+onMounted(() => {
+  startAutoPlay();
+});
+
+// Bersihkan interval saat komponen dihancurkan agar tidak terjadi memory leak
+onUnmounted(() => {
+  stopAutoPlay();
+});
 </script>
 
 <template>
-  <section id="community" class="py-32 bg-white">
-    <div class="max-w-7xl mx-auto px-4">
-       <div class="text-center mb-24 space-y-6">
-          <div class="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 px-6 py-2 rounded-full font-black text-sm uppercase tracking-widest ring-1 ring-indigo-100">
-            <Zap class="h-4 w-4 fill-indigo-700" /> Agenda & Pelatihan
-          </div>
-          <h2 class="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter">Event Kolaborasi ASIQ</h2>
-          <p class="text-slate-500 font-medium text-lg">Kegiatan pembelajaran mendalam & pelatihan sekolah di berbagai daerah.</p>
-       </div>
+  <div class="max-w-5xl mx-auto w-full p-4">
+    <div class="relative overflow-hidden rounded-[2rem] shadow-xl group bg-slate-100" @mouseenter="stopAutoPlay" @mouseleave="startAutoPlay">
+      <div class="flex transition-transform duration-500 ease-in-out" :style="{ transform: `translateX(-${currentIndex * 100}%)` }">
+        <div v-for="(event, index) in events" :key="index" class="min-w-full flex-shrink-0 relative h-[400px]">
+          <img :src="event.img" :alt="event.title" class="w-full h-full object-cover" />
 
-       <div class="flex overflow-x-auto gap-10 pb-16 no-scrollbar snap-x snap-mandatory">
-          <div v-for="(ev, i) in events" :key="i" 
-               class="min-w-[26rem] md:min-w-[30rem] snap-center bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden group hover:-translate-y-4 transition-all duration-700 flex flex-col hover:shadow-2xl">
-            <div class="relative h-72 overflow-hidden">
-              <img :src="ev.img" class="w-full h-full object-cover group-hover:scale-110 transition duration-1000 grayscale-[0.3] group-hover:grayscale-0" />
-              <div class="absolute bottom-8 left-8 bg-white/95 backdrop-blur-md px-5 py-2.5 rounded-2xl text-xs font-black text-slate-900 shadow-2xl">
-                {{ ev.date }}
-              </div>
-            </div>
-            
-            <div class="p-12 space-y-6 flex-grow flex flex-col justify-between">
-              <div class="space-y-4">
-                <h4 class="text-2xl font-black text-slate-900 leading-tight group-hover:text-blue-600 transition-colors">{{ ev.title }}</h4>
-                <p class="text-sm font-bold text-slate-400 flex items-center gap-3"><School class="h-5 w-5 text-blue-500" /> {{ ev.loc }}</p>
-              </div>
-
-              <div class="pt-8 border-t border-slate-50 flex items-center justify-between">
-                <div class="flex flex-col">
-                  <span class="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 mb-1">Sumber</span>
-                  <span class="text-xs font-black text-blue-600 underline decoration-2 underline-offset-4">{{ ev.source }}</span>
-                </div>
-                <div class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-500 shadow-inner">
-                  <ArrowRight class="h-6 w-6" />
-                </div>
-              </div>
+          <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-8">
+            <span class="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full w-max mb-3">
+              {{ event.date }}
+            </span>
+            <h3 class="text-2xl font-black text-white mb-2">{{ event.title }}</h3>
+            <div class="flex items-center gap-4 text-slate-200 text-sm">
+              <span class="flex items-center gap-1">📍 {{ event.loc }}</span>
+              <span class="flex items-center gap-1">📝 {{ event.source }}</span>
             </div>
           </div>
-       </div>
+        </div>
+      </div>
+
+      <button
+        @click="prevSlide"
+        class="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 hover:bg-white/40 backdrop-blur-md rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+      >
+        <ChevronLeft class="w-6 h-6" />
+      </button>
+
+      <button
+        @click="nextSlide"
+        class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 hover:bg-white/40 backdrop-blur-md rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+      >
+        <ChevronRight class="w-6 h-6" />
+      </button>
+
+      <div class="absolute bottom-6 right-8 flex gap-2">
+        <button
+          v-for="(_, index) in events"
+          :key="'dot-' + index"
+          @click="currentIndex = index"
+          :class="['h-2 rounded-full transition-all duration-300', currentIndex === index ? 'bg-blue-500 w-8' : 'bg-white/50 w-2 hover:bg-white/80']"
+        ></button>
+      </div>
     </div>
-  </section>
+  </div>
 </template>
 
 <style scoped>
