@@ -106,7 +106,12 @@ const processRPP = async (formData: any) => {
         } else if (s === "failed" || s === "error") {
           clearInterval(pollingInterval!);
           pollingInterval = null;
-          alert("Terjadi kesalahan saat memproses RPP. Coba lagi.");
+          try {
+            // Panggil getResult untuk menangkap error detail dari API
+            await getResult(job.job_id);
+          } catch (err: any) {
+            alert("Terjadi kesalahan saat memproses RPP:\n" + err.message);
+          }
           activeTab.value = "rpp-form";
         }
       } catch (e: any) {

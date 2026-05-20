@@ -79,7 +79,16 @@ export async function getResult(jobId: string): Promise<RPPResultResponse> {
       'Cache-Control': 'no-cache',
     },
   })
-  if (!res.ok) throw new Error(`Ambil hasil gagal: ${res.status}`)
+  if (!res.ok) {
+    let errMsg = `Ambil hasil gagal: ${res.status}`;
+    try {
+      const errJson = await res.json();
+      if (errJson && errJson.detail) {
+        errMsg = errJson.detail;
+      }
+    } catch (_) {}
+    throw new Error(errMsg);
+  }
   return res.json()
 }
 
