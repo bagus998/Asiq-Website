@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { CheckCircle2, FileText, PenTool, BookOpen, Plus, LayoutDashboard, Clock, Zap, FolderOpen, Users } from "lucide-vue-next";
+import { CheckCircle2, FileText, PenTool, BookOpen, Plus, LayoutDashboard, Clock, FolderOpen, Zap, Users } from "lucide-vue-next";
+import { useRouter } from "vue-router";
 
-const emit = defineEmits(["start-rpp", "show-pricing"]);
+const router = useRouter();
+const emit = defineEmits<{
+  (e: "show-pricing"): void;
+}>();
 
 const stats = [
   { label: "Projek", value: 0, icon: FolderOpen, color: "bg-[#1e2b4d]" },
@@ -12,6 +16,7 @@ const stats = [
 
 <template>
   <div class="space-y-8 max-w-7xl mx-auto">
+    <!-- Welcome Banner -->
     <div class="bg-white rounded-3xl p-10 border border-slate-200 flex flex-col lg:flex-row items-center gap-12 relative overflow-hidden group shadow-sm">
       <div class="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 opacity-50"></div>
       <div class="relative z-10 space-y-6 flex-grow">
@@ -35,12 +40,20 @@ const stats = [
       </div>
     </div>
 
-    <div class="grid md:grid-cols-3 gap-6">
-      <button @click="emit('start-rpp')" class="p-8 bg-[#eddef2] rounded-3xl text-left border border-fuchsia-100 hover:shadow-xl hover:shadow-fuchsia-100 transition-all group flex flex-col gap-4">
+    <!-- Quick Action Tiles -->
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <button @click="emit('show-pricing')" class="p-8 bg-[#eddef2] rounded-3xl text-left border border-fuchsia-100 hover:shadow-xl hover:shadow-fuchsia-100 transition-all group flex flex-col gap-4">
         <div class="w-12 h-12 bg-white/50 backdrop-blur rounded-2xl flex items-center justify-center p-2.5">
           <FileText class="w-full h-full text-fuchsia-600" />
         </div>
         <h3 class="text-lg font-bold text-slate-900 pr-8">AI Rencana Pembelajaran (RPP)</h3>
+      </button>
+      <button @click="router.push('/dashboard/rpp')" class="p-8 bg-[#dff5e3] rounded-3xl text-left border border-emerald-100 hover:shadow-xl hover:shadow-emerald-100 transition-all group flex flex-col gap-4 relative overflow-hidden">
+        <span class="absolute top-4 right-4 px-2.5 py-1 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider rounded-full shadow-md animate-pulse">NEW</span>
+        <div class="w-12 h-12 bg-white/50 backdrop-blur rounded-2xl flex items-center justify-center p-2.5">
+          <FileText class="w-full h-full text-emerald-600" />
+        </div>
+        <h3 class="text-lg font-bold text-slate-900 pr-8">AI Rencana Pembelajaran Inklusif (RPP Inklusif)</h3>
       </button>
       <button @click="emit('show-pricing')" class="p-8 bg-[#e1daf5] rounded-3xl text-left border border-indigo-100 hover:shadow-xl hover:shadow-indigo-100 transition-all group flex flex-col gap-4">
         <div class="w-12 h-12 bg-white/50 backdrop-blur rounded-2xl flex items-center justify-center p-2.5">
@@ -56,9 +69,11 @@ const stats = [
       </button>
     </div>
 
+    <!-- Summary Grid -->
     <div class="grid lg:grid-cols-3 gap-8">
+      <!-- Left: Create Project Card -->
       <button
-        @click="emit('start-rpp')"
+        @click="router.push('/dashboard/rpp')"
         class="lg:col-span-1 bg-gradient-to-br from-blue-600 to-blue-700 rounded-3xl p-10 flex flex-col items-center justify-center text-center space-y-6 relative overflow-hidden cursor-pointer hover:from-blue-700 hover:to-blue-800 hover:shadow-2xl hover:shadow-blue-200 hover:-translate-y-1 transition-all"
       >
         <div class="absolute -top-12 -left-12 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
@@ -71,6 +86,7 @@ const stats = [
         </div>
       </button>
 
+      <!-- Middle: Analytics Summaries -->
       <div class="lg:col-span-1 bg-white rounded-3xl p-8 border border-slate-200 space-y-8 flex flex-col">
         <div class="flex items-center gap-2">
           <LayoutDashboard class="w-5 h-5 text-slate-400" />
@@ -93,6 +109,7 @@ const stats = [
         </div>
       </div>
 
+      <!-- Right: Subscriptions -->
       <div class="lg:col-span-1 bg-white rounded-3xl p-8 border border-slate-200 space-y-8">
         <div class="flex items-center gap-2">
           <FolderOpen class="w-5 h-5 text-slate-400" />
@@ -108,7 +125,7 @@ const stats = [
               <span class="text-xs text-slate-500">Premium Account</span>
             </div>
           </div>
-          <button class="w-full py-4 text-sm font-bold text-blue-600 bg-white border border-slate-100 rounded-xl hover:shadow-lg transition-all">Kelola Paket Berlangganan</button>
+          <button @click="emit('show-pricing')" class="w-full py-4 text-sm font-bold text-blue-600 bg-white border border-slate-100 rounded-xl hover:shadow-lg transition-all">Kelola Paket Berlangganan</button>
         </div>
       </div>
     </div>

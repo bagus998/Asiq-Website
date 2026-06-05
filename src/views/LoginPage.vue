@@ -3,7 +3,6 @@ import { ref } from "vue";
 import { logoUrl } from "../constants";
 import { useRouter } from "vue-router";
 import { ArrowLeft, Mail, Lock, User, Chrome, Apple, CheckCircle2 } from "lucide-vue-next";
-// Import supabase secara langsung di atas
 import { supabase } from "../lib/supabase";
 
 const router = useRouter();

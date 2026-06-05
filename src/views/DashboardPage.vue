@@ -1,33 +1,26 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { supabase } from "../lib/supabase";
-import { useRouter } from "vue-router";
-import { generateRPP, checkStatus, getResult, downloadPDF } from "../services/rppApi";
+import { useRouter, useRoute } from "vue-router";
 import { HelpCircle } from "lucide-vue-next";
+import { useRppState } from "../composables/useRppState";
 
 import Sidebar from "../components/layout/Sidebar.vue";
 import TopHeader from "../components/layout/TopHeader.vue";
-import DashboardHome from "../components/rpp/DashboardHome.vue";
-import RppForm from "../components/rpp/RppForm.vue";
-import ProcessingState from "../components/rpp/ProcessingState.vue";
-import RppResult from "../components/rpp/RppResult.vue";
+import PricingModal from "../components/rpp/PricingModal.vue";
 
 const router = useRouter();
-const activeTab = ref("dashboard"); // 'dashboard', 'rpp-form', 'processing', 'results'
-const activeMenu = ref("Dasbor");
+const route = useRoute();
 const userEmail = ref("");
+const showPricing = ref(false);
+const { cleanup } = useRppState();
 
-const currentJobId = ref<string | null>(null);
-let pollingInterval: ReturnType<typeof setInterval> | null = null;
-
-const recentRPP = ref({
-  title: "",
-  subText: "",
-  readability: 0,
-  accessibility: 0,
-  strengths: [] as Array<{ title: string; desc: string }>,
-  resources: [] as Array<{ name: string; type: string; icon: any }>,
-  pdf_url: null as string | null,
+// Derive active menu from current route
+const activeMenu = computed(() => {
+  const path = route.path;
+  if (path.startsWith("/dashboard/projects")) return "Semua Proyek";
+  if (path.startsWith("/dashboard/library")) return "Perpustakaan";
+  return "Dasbor";
 });
 
 onMounted(async () => {
@@ -40,7 +33,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  if (pollingInterval) clearInterval(pollingInterval);
+  cleanup();
 });
 
 const handleLogout = async () => {
@@ -49,118 +42,37 @@ const handleLogout = async () => {
 };
 
 const handleNavigation = (menuName: string) => {
-  activeMenu.value = menuName;
-  activeTab.value = "dashboard";
-};
-
-// Menerima data dari RppForm
-const processRPP = async (formData: any) => {
-  activeTab.value = "processing";
-
-  try {
-    const job = await generateRPP({
-      nama_siswa: formData.namaSiswa,
-      kelas: formData.selectedJenjang,
-      mata_pelajaran: formData.selectedMataPelajaran,
-      gejala: formData.selectedDisabilitas + (formData.studentProfile ? ": " + formData.studentProfile : ""),
-      materi_mentah: formData.rawMaterial || undefined,
-    });
-    currentJobId.value = job.job_id;
-
-    pollingInterval = setInterval(async () => {
-      try {
-        const status = await checkStatus(job.job_id);
-        const s = status.status.toLowerCase();
-
-        if (s === "completed" || s === "done" || s === "finished") {
-          clearInterval(pollingInterval!);
-          pollingInterval = null;
-          const r = await getResult(job.job_id);
-
-          recentRPP.value = {
-            title: `RPP Inklusif — ${r.nama_siswa}`,
-            subText: `${r.mata_pelajaran} · ${r.kelas}`,
-            readability: r.readability_score,
-            accessibility: r.wcag_score,
-            strengths: [
-              { title: "Profil Siswa", desc: r.profiling },
-              { title: "Strategi Adaptif", desc: r.adaptive },
-            ],
-            resources: [{ name: "Insight AI", type: r.insight, icon: "FileText" }],
-            pdf_url: r.pdf_url,
-          };
-
-          // Simpan ke Supabase
-          const { data: sessionData } = await supabase.auth.getSession();
-          if (sessionData.session) {
-            await supabase.from("materials").insert({
-              user_id: sessionData.session.user.id,
-              raw_content: formData.rawMaterial,
-              student_profile: formData.studentProfile,
-              readability_score: r.readability_score,
-              accessibility_score: r.wcag_score,
-            });
-          }
-
-          activeTab.value = "results";
-        } else if (s === "failed" || s === "error") {
-          clearInterval(pollingInterval!);
-          pollingInterval = null;
-          alert("Terjadi kesalahan saat memproses RPP. Coba lagi.");
-          activeTab.value = "rpp-form";
-        }
-      } catch (e: any) {
-        clearInterval(pollingInterval!);
-        pollingInterval = null;
-        alert("Error: " + e.message);
-        activeTab.value = "rpp-form";
-      }
-    }, 2000);
-  } catch (e: any) {
-    alert("Gagal menghubungi API: " + e.message);
-    activeTab.value = "rpp-form";
-  }
-};
-
-const handleDownload = async () => {
-  if (recentRPP.value.pdf_url) {
-    const a = document.createElement("a");
-    a.href = recentRPP.value.pdf_url;
-    a.download = "RPP.pdf";
-    a.target = "_blank";
-    a.click();
-    return;
-  }
-  if (!currentJobId.value) return;
-  try {
-    const blob = await downloadPDF(currentJobId.value);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "RPP.pdf";
-    a.click();
-    URL.revokeObjectURL(url);
-  } catch (e: any) {
-    alert("Gagal download: " + e.message);
+  if (menuName === "Semua Proyek") {
+    router.push("/dashboard/projects");
+  } else if (menuName === "Perpustakaan") {
+    router.push("/dashboard/library");
+  } else {
+    router.push("/dashboard");
   }
 };
 </script>
 
 <template>
   <div class="flex h-screen bg-slate-50 overflow-hidden font-sans">
-    <Sidebar :active-menu="activeMenu" @navigate="handleNavigation" />
+    <Sidebar :active-menu="activeMenu" @navigate="handleNavigation" @show-pricing="showPricing = true" />
+
+    <!-- Pricing Modal -->
+    <Transition name="modal-pop">
+      <PricingModal v-if="showPricing" @close="showPricing = false" />
+    </Transition>
 
     <main class="flex-grow flex flex-col overflow-hidden">
-      <TopHeader :user-email="userEmail" @logout="handleLogout" />
+      <TopHeader :user-email="userEmail" @logout="handleLogout" @show-pricing="showPricing = true" />
 
-      <div class="flex-grow overflow-y-auto p-8 layout-scroll">
-        <DashboardHome v-if="activeTab === 'dashboard'" @start-rpp="activeTab = 'rpp-form'" />
-
-        <RppForm v-else-if="activeTab === 'rpp-form'" @submit-rpp="processRPP" />
-
-        <ProcessingState v-else-if="activeTab === 'processing'" />
-
-        <RppResult v-else-if="activeTab === 'results'" :result-data="recentRPP" @create-new="activeTab = 'dashboard'" @download="handleDownload" />
+      <div class="flex-grow overflow-y-auto p-8 layout-scroll relative">
+        <router-view v-slot="{ Component }">
+          <Transition name="tab-slide" mode="out-in">
+            <component
+              :is="Component"
+              @show-pricing="showPricing = true"
+            />
+          </Transition>
+        </router-view>
       </div>
 
       <button class="fixed bottom-8 right-8 px-6 py-3 bg-blue-600 text-white rounded-full font-bold flex items-center gap-3 shadow-2xl shadow-blue-200 hover:-translate-y-1 transition-all">
@@ -177,5 +89,49 @@ const handleDownload = async () => {
 .layout-scroll {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* === Tab Content Transitions === */
+.tab-slide-enter-active {
+  transition:
+    opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tab-slide-leave-active {
+  transition:
+    opacity 0.2s cubic-bezier(0.4, 0, 1, 1),
+    transform 0.2s cubic-bezier(0.4, 0, 1, 1),
+    filter 0.2s cubic-bezier(0.4, 0, 1, 1);
+}
+.tab-slide-enter-from {
+  opacity: 0;
+  transform: translateY(20px) scale(0.98);
+  filter: blur(3px);
+}
+.tab-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.99);
+  filter: blur(2px);
+}
+
+/* === Modal Pop Transition === */
+.modal-pop-enter-active {
+  transition:
+    opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.modal-pop-leave-active {
+  transition:
+    opacity 0.2s cubic-bezier(0.4, 0, 1, 1),
+    transform 0.2s cubic-bezier(0.4, 0, 1, 1);
+}
+.modal-pop-enter-from {
+  opacity: 0;
+  transform: scale(0.9);
+}
+.modal-pop-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
 }
 </style>
