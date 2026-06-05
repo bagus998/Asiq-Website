@@ -230,7 +230,6 @@ const handleSubmit = () => {
           </div>
         </div>
 
-
         <div class="space-y-4">
           <label class="block text-sm font-bold text-slate-900">Identifikasi Murid</label>
           <textarea v-model="studentProfile" rows="4" placeholder="Contoh: Murid kelas 3 non inklusi dengan pengetahuan level siswa belum mengenal energi di sekitar dengan sekolah daerah perkotaan dengan budaya belajar" class="w-full p-6 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-blue-600 transition-all text-sm text-slate-600"></textarea>
