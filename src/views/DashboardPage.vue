@@ -67,10 +67,7 @@ const handleNavigation = (menuName: string) => {
       <div class="flex-grow overflow-y-auto p-8 layout-scroll relative">
         <router-view v-slot="{ Component }">
           <Transition name="tab-slide" mode="out-in">
-            <component
-              :is="Component"
-              @show-pricing="showPricing = true"
-            />
+            <component :is="Component" @show-pricing="showPricing = true" />
           </Transition>
         </router-view>
       </div>
