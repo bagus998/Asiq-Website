@@ -77,7 +77,13 @@ export function useRppState() {
             clearInterval(pollingInterval!);
             pollingInterval = null;
             isProcessing.value = false;
-            alert("Terjadi kesalahan saat memproses RPP. Coba lagi.");
+            try {
+              // Ambil detail error dari API
+              const errResult = await getResult(job.job_id);
+              alert("Terjadi kesalahan saat memproses RPP:\n" + JSON.stringify(errResult, null, 2));
+            } catch (err: any) {
+              alert("Terjadi kesalahan saat memproses RPP:\n" + err.message);
+            }
             router.push("/dashboard/rpp");
           }
         } catch (e: any) {

@@ -21,11 +21,11 @@ export default defineConfig(({ mode }) => {
       hmr: process.env.DISABLE_HMR !== "true",
       proxy: {
         "/api": {
-          target: env.ASIQ_API_URL || "http://13.212.231.53:8000",
+          target: env.VITE_ASIQ_API_URL || "http://54.169.58.174:8000",
           changeOrigin: true,
           configure: (proxy) => {
             proxy.on("proxyReq", (proxyReq) => {
-              const apiKey = env.ASIQ_API_KEY;
+              const apiKey = env.VITE_ASIQ_API_KEY;
               if (apiKey) {
                 proxyReq.setHeader("X-API-Key", apiKey);
               }
