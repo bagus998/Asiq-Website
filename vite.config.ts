@@ -1,28 +1,36 @@
-import tailwindcss from '@tailwindcss/vite';
-import vue from '@vitejs/plugin-vue';
-import path from 'path';
-import {defineConfig, loadEnv} from 'vite';
+import tailwindcss from "@tailwindcss/vite";
+import vue from "@vitejs/plugin-vue";
+import path from "path";
+import { defineConfig, loadEnv } from "vite";
 
-export default defineConfig(({mode}) => {
-  const env = loadEnv(mode, '.', '');
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, ".", "");
   return {
     plugins: [vue(), tailwindcss()],
     define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+      "process.env.GEMINI_API_KEY": JSON.stringify(env.GEMINI_API_KEY),
     },
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        "@": path.resolve(__dirname, "."),
       },
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.
-      hmr: process.env.DISABLE_HMR !== 'true',
+      hmr: process.env.DISABLE_HMR !== "true",
       proxy: {
-        '/api': {
-          target: process.env.VITE_ASIQ_API_URL || 'http://13.212.231.53:8000',
+        "/api": {
+          target: env.VITE_ASIQ_API_URL || "http://54.169.58.174:8000",
           changeOrigin: true,
+          configure: (proxy) => {
+            proxy.on("proxyReq", (proxyReq) => {
+              const apiKey = env.VITE_ASIQ_API_KEY;
+              if (apiKey) {
+                proxyReq.setHeader("X-API-Key", apiKey);
+              }
+            });
+          },
         },
       },
     },

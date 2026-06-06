@@ -1,30 +1,78 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Check, ChevronDown } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+import { Check, ChevronDown, UploadCloud, FileText, X } from 'lucide-vue-next'
+import { useRppState } from '../../composables/useRppState'
 
 export interface RppFormData {
   rawMaterial: string
+  uploadedFile: File | null
   namaSiswa: string
   selectedJenjang: string
   selectedMataPelajaran: string
-  selectedPertemuan: string
-  selectedDisabilitas: string
   studentProfile: string
 }
 
-const emit = defineEmits<{
-  (e: 'submit', data: RppFormData): void
-}>()
+const router = useRouter()
+const { processRPP } = useRppState()
 
 const rppStep = ref(1)
 
-const rawMaterial = ref('')
+const uploadedFile = ref<File | null>(null)
+const isDragging = ref(false)
 const studentProfile = ref('')
 const namaSiswa = ref('')
 const selectedJenjang = ref('')
 const selectedMataPelajaran = ref('')
-const selectedPertemuan = ref('')
-const selectedDisabilitas = ref('')
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
+const allowedTypes = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+]
+const allowedExtensions = ['.pdf', '.doc', '.docx', '.txt', '.ppt', '.pptx']
+
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+const handleFileSelect = (file: File) => {
+  const ext = '.' + file.name.split('.').pop()?.toLowerCase()
+  if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(ext)) {
+    alert('Format file tidak didukung. Gunakan PDF, DOC, DOCX, TXT, PPT, atau PPTX.')
+    return
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    alert('Ukuran file maksimal 10 MB.')
+    return
+  }
+  uploadedFile.value = file
+}
+
+const onFileInput = (e: Event) => {
+  const input = e.target as HTMLInputElement
+  if (input.files && input.files[0]) {
+    handleFileSelect(input.files[0])
+  }
+  input.value = ''
+}
+
+const onDrop = (e: DragEvent) => {
+  isDragging.value = false
+  if (e.dataTransfer?.files && e.dataTransfer.files[0]) {
+    handleFileSelect(e.dataTransfer.files[0])
+  }
+}
+
+const removeFile = () => {
+  uploadedFile.value = null
+}
 
 const jenjangOptions = [
   'PAUD', 'SD/MI Tingkat 1', 'SD/MI Tingkat 2', 'SD/MI Tingkat 3', 
@@ -42,35 +90,24 @@ const mataPelajaranOptions = [
   'Matematika Peminatan', 'Fisika', 'Kimia', 'Biologi', 'Ekonomi', 
   'Sosiologi', 'Geografi', 'Sejarah Peminatan', 'Bahasa dan Sastra Indonesia', 
   'Bahasa dan Sastra Inggris', 'Bahasa Arab', 'Bahasa Jepang', 'Bahasa Mandarin', 
-  'Bahasa Jerman', 'Bahasa Prancis', 'Antropologi', 'Al-Qur’an Hadis', 
+  'Bahasa Jerman', 'Bahasa Prancis', 'Antropologi', 'Al-Qur\u2019an Hadis', 
   'Akidah Akhlak', 'Fiqih', 'Sejarah Kebudayaan Islam (SKI)', 
   'Kecerdasan Buatan (AI)', 'Muatan Lokal (Bahasa Daerah)'
 ];
 
-const jumlahPertemuanOptions = ['1x', '2x', '3x', '4x', '5x'];
-
-const disabilitasOptions = [
-  'Disabilitas Netra', 'Disabilitas Rungu', 'Disabilitas Daksa', 
-  'Disabilitas Intelektual', 'Gangguan Emosi dan Perilaku', 
-  'Gangguan Komunikasi', 'Disabilitas Mental', 
-  'Gangguan Perhatian dan Hiperaktivitas', 'Kesulitan Belajar spesifik', 
-  'Gangguan Spektrum Autis (ASD)'
-];
-
 const handleSubmit = () => {
-  if (!rawMaterial.value || !namaSiswa.value || !selectedJenjang.value || !selectedMataPelajaran.value || !selectedDisabilitas.value) {
-    alert('Mohon lengkapi Materi Mentah, Nama Siswa, Jenjang, Mata Pelajaran, dan Disabilitas terlebih dahulu.')
+  if (!uploadedFile.value || !namaSiswa.value || !selectedJenjang.value || !selectedMataPelajaran.value) {
+    alert('Mohon lengkapi File Materi, Nama Siswa, Jenjang, dan Mata Pelajaran terlebih dahulu.')
     return
   }
-  emit('submit', {
-    rawMaterial: rawMaterial.value,
+  processRPP({
+    rawMaterial: '',
+    uploadedFile: uploadedFile.value,
     namaSiswa: namaSiswa.value,
     selectedJenjang: selectedJenjang.value,
     selectedMataPelajaran: selectedMataPelajaran.value,
-    selectedPertemuan: selectedPertemuan.value,
-    selectedDisabilitas: selectedDisabilitas.value,
     studentProfile: studentProfile.value
-  })
+  }, router)
 }
 </script>
 
@@ -103,9 +140,56 @@ const handleSubmit = () => {
       <div class="space-y-6">
         <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">Dokumen</p>
         <div class="space-y-4">
-          <label class="block text-sm font-bold text-slate-900">Materi Mentah (Teks)</label>
-          <textarea v-model="rawMaterial" rows="6" placeholder="Masukkan teks materi pembelajaran Anda di sini..." class="w-full p-6 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-blue-600 transition-all text-sm text-slate-600"></textarea>
-          <p class="text-xs text-slate-400 italic">Materi yang dimasukkan akan dianalisis dan disesuaikan dengan kebutuhan siswa.</p>
+          <label class="block text-sm font-bold text-slate-900">Upload Materi Pembelajaran *</label>
+
+          <!-- File not yet uploaded: show dropzone -->
+          <div
+            v-if="!uploadedFile"
+            @click="fileInputRef?.click()"
+            @dragover.prevent="isDragging = true"
+            @dragleave.prevent="isDragging = false"
+            @drop.prevent="onDrop"
+            :class="[
+              'w-full p-10 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-4 cursor-pointer transition-all',
+              isDragging
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-slate-200 bg-slate-50 hover:border-blue-400 hover:bg-blue-50/50'
+            ]"
+          >
+            <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center">
+              <UploadCloud class="w-8 h-8 text-blue-500" />
+            </div>
+            <div class="text-center space-y-1">
+              <p class="text-sm font-bold text-slate-700">Klik atau seret file ke sini</p>
+              <p class="text-xs text-slate-400">PDF, DOC, DOCX, TXT, PPT, PPTX — Maks 10 MB</p>
+            </div>
+          </div>
+
+          <!-- File uploaded: show file info -->
+          <div
+            v-else
+            class="w-full p-6 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-4"
+          >
+            <div class="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
+              <FileText class="w-6 h-6 text-emerald-600" />
+            </div>
+            <div class="flex-grow min-w-0">
+              <p class="text-sm font-bold text-slate-900 truncate">{{ uploadedFile.name }}</p>
+              <p class="text-xs text-slate-500">{{ formatFileSize(uploadedFile.size) }}</p>
+            </div>
+            <button @click="removeFile" class="w-8 h-8 bg-white border border-slate-200 rounded-lg flex items-center justify-center hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-all text-slate-400 shrink-0">
+              <X class="w-4 h-4" />
+            </button>
+          </div>
+
+          <input
+            ref="fileInputRef"
+            type="file"
+            accept=".pdf,.doc,.docx,.txt,.ppt,.pptx"
+            class="hidden"
+            @change="onFileInput"
+          />
+          <p class="text-xs text-slate-400 italic">File materi yang diupload akan dianalisis dan disesuaikan dengan kebutuhan siswa.</p>
         </div>
       </div>
 
@@ -143,32 +227,6 @@ const handleSubmit = () => {
               <ChevronDown class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             </div>
             <p class="text-[10px] text-slate-400">Mata pelajaran hanya dapat dipilih setelah Jenjang/Tingkat dipilih.</p>
-          </div>
-        </div>
-
-        <div class="grid md:grid-cols-2 gap-6">
-          <div class="space-y-4">
-            <label class="block text-sm font-bold text-slate-900">Jumlah Pertemuan</label>
-            <div class="flex gap-4">
-              <div class="relative flex-grow">
-                <select v-model="selectedPertemuan" class="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-blue-600 appearance-none text-sm text-slate-600">
-                  <option value="" disabled>Pilih Jumlah</option>
-                  <option v-for="option in jumlahPertemuanOptions" :key="option" :value="option">{{ option }}</option>
-                </select>
-                <ChevronDown class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              </div>
-              <div class="px-6 py-4 bg-slate-100 rounded-xl text-xs font-bold text-slate-500 flex items-center">Pertemuan</div>
-            </div>
-          </div>
-          <div class="space-y-4">
-            <label class="block text-sm font-bold text-slate-900">Disabilitas</label>
-            <div class="relative">
-              <select v-model="selectedDisabilitas" class="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-blue-600 appearance-none text-sm text-slate-600">
-                <option value="" disabled>Disabilitas yang Dimiliki</option>
-                <option v-for="option in disabilitasOptions" :key="option" :value="option">{{ option }}</option>
-              </select>
-              <ChevronDown class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            </div>
           </div>
         </div>
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { CheckCircle2, FileText, PenTool, BookOpen, Plus, LayoutDashboard, Clock, Zap, FolderOpen, Users } from "lucide-vue-next";
 
-const emit = defineEmits(["start-rpp"]);
+const emit = defineEmits(["start-rpp", "show-pricing"]);
 
 const stats = [
   { label: "Projek", value: 0, icon: FolderOpen, color: "bg-[#1e2b4d]" },
@@ -42,13 +42,13 @@ const stats = [
         </div>
         <h3 class="text-lg font-bold text-slate-900 pr-8">AI Rencana Pembelajaran (RPP)</h3>
       </button>
-      <button class="p-8 bg-[#e1daf5] rounded-3xl text-left border border-indigo-100 hover:shadow-xl hover:shadow-indigo-100 transition-all group flex flex-col gap-4">
+      <button @click="emit('show-pricing')" class="p-8 bg-[#e1daf5] rounded-3xl text-left border border-indigo-100 hover:shadow-xl hover:shadow-indigo-100 transition-all group flex flex-col gap-4">
         <div class="w-12 h-12 bg-white/50 backdrop-blur rounded-2xl flex items-center justify-center p-2.5">
           <PenTool class="w-full h-full text-indigo-600" />
         </div>
         <h3 class="text-lg font-bold text-slate-900 pr-8">AI Soal Latihan</h3>
       </button>
-      <button class="p-8 bg-[#fdf2e1] rounded-3xl text-left border border-orange-100 hover:shadow-xl hover:shadow-orange-100 transition-all group flex flex-col gap-4">
+      <button @click="emit('show-pricing')" class="p-8 bg-[#fdf2e1] rounded-3xl text-left border border-orange-100 hover:shadow-xl hover:shadow-orange-100 transition-all group flex flex-col gap-4">
         <div class="w-12 h-12 bg-white/50 backdrop-blur rounded-2xl flex items-center justify-center p-2.5">
           <BookOpen class="w-full h-full text-orange-600" />
         </div>
@@ -57,7 +57,10 @@ const stats = [
     </div>
 
     <div class="grid lg:grid-cols-3 gap-8">
-      <div class="lg:col-span-1 bg-gradient-to-br from-blue-600 to-blue-700 rounded-3xl p-10 flex flex-col items-center justify-center text-center space-y-6 relative overflow-hidden">
+      <button
+        @click="emit('start-rpp')"
+        class="lg:col-span-1 bg-gradient-to-br from-blue-600 to-blue-700 rounded-3xl p-10 flex flex-col items-center justify-center text-center space-y-6 relative overflow-hidden cursor-pointer hover:from-blue-700 hover:to-blue-800 hover:shadow-2xl hover:shadow-blue-200 hover:-translate-y-1 transition-all"
+      >
         <div class="absolute -top-12 -left-12 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
         <div class="w-24 h-24 bg-white/20 backdrop-blur-xl border border-white/30 rounded-3xl p-6 shadow-2xl">
           <Plus class="w-full h-full text-white" />
@@ -66,7 +69,7 @@ const stats = [
           <h3 class="text-2xl font-black text-white">Mulailah dengan membuat proyek baru</h3>
           <p class="text-blue-100 text-sm">Kelola semua dokumen ajar dalam satu tempat mudah dan cepat</p>
         </div>
-      </div>
+      </button>
 
       <div class="lg:col-span-1 bg-white rounded-3xl p-8 border border-slate-200 space-y-8 flex flex-col">
         <div class="flex items-center gap-2">
