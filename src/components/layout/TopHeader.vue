@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted } from "vue";
 import { Menu, Search, ChevronDown, Zap, Check, Plus, User, Crown, Moon, Sun, Settings, LogOut } from "lucide-vue-next";
 
 const props = defineProps<{ userEmail: string }>();
-const emit = defineEmits(["logout", "show-pricing"]);
+const emit = defineEmits(["logout", "show-pricing", "toggle-sidebar"]);
 
 const showDropdown = ref(false);
 const dropdownRef = ref<HTMLElement | null>(null);
@@ -52,7 +52,7 @@ onUnmounted(() => {
   >
     <!-- Left: hamburger + search -->
     <div class="flex items-center gap-4 flex-grow max-w-md">
-      <button class="p-1.5 text-slate-500 hover:text-slate-700 transition-colors">
+      <button @click="emit('toggle-sidebar')" class="p-1.5 text-slate-500 hover:text-slate-700 transition-colors md:hidden">
         <Menu class="w-5 h-5" />
       </button>
       <div class="relative flex-grow">

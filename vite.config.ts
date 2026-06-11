@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => {
       hmr: process.env.DISABLE_HMR !== "true",
       proxy: {
         "/api": {
-          target: env.VITE_ASIQ_API_URL || "http://54.169.58.174:8000",
+          target: env.VITE_ASIQ_API_URL || "http://13.250.8.27:8000",
           changeOrigin: true,
           configure: (proxy) => {
             proxy.on("proxyReq", (proxyReq) => {

@@ -13,6 +13,7 @@ const router = useRouter();
 const route = useRoute();
 const userEmail = ref("");
 const showPricing = ref(false);
+const isSidebarOpen = ref(false);
 const { cleanup } = useRppState();
 
 // Derive active menu from current route
@@ -42,6 +43,7 @@ const handleLogout = async () => {
 };
 
 const handleNavigation = (menuName: string) => {
+  isSidebarOpen.value = false;
   if (menuName === "Semua Proyek") {
     router.push("/dashboard/projects");
   } else if (menuName === "Perpustakaan") {
@@ -53,18 +55,23 @@ const handleNavigation = (menuName: string) => {
 </script>
 
 <template>
-  <div class="flex h-screen bg-slate-50 overflow-hidden font-sans">
-    <Sidebar :active-menu="activeMenu" @navigate="handleNavigation" @show-pricing="showPricing = true" />
+  <div class="flex h-screen bg-slate-50 overflow-hidden font-sans relative">
+    <!-- Mobile Sidebar Backdrop -->
+    <Transition name="fade">
+      <div v-if="isSidebarOpen" @click="isSidebarOpen = false" class="fixed inset-0 bg-slate-900/50 z-40 md:hidden backdrop-blur-sm"></div>
+    </Transition>
+
+    <Sidebar :active-menu="activeMenu" :is-sidebar-open="isSidebarOpen" @navigate="handleNavigation" @show-pricing="showPricing = true" />
 
     <!-- Pricing Modal -->
     <Transition name="modal-pop">
       <PricingModal v-if="showPricing" @close="showPricing = false" />
     </Transition>
 
-    <main class="flex-grow flex flex-col overflow-hidden">
-      <TopHeader :user-email="userEmail" @logout="handleLogout" @show-pricing="showPricing = true" />
+    <main class="flex-grow flex flex-col overflow-hidden w-full">
+      <TopHeader :user-email="userEmail" @logout="handleLogout" @show-pricing="showPricing = true" @toggle-sidebar="isSidebarOpen = !isSidebarOpen" />
 
-      <div class="flex-grow overflow-y-auto p-8 layout-scroll relative">
+      <div class="flex-grow overflow-y-auto p-4 md:p-8 layout-scroll relative">
         <router-view v-slot="{ Component }">
           <Transition name="tab-slide" mode="out-in">
             <component :is="Component" @show-pricing="showPricing = true" />
@@ -72,8 +79,8 @@ const handleNavigation = (menuName: string) => {
         </router-view>
       </div>
 
-      <button class="fixed bottom-8 right-8 px-6 py-3 bg-blue-600 text-white rounded-full font-bold flex items-center gap-3 shadow-2xl shadow-blue-200 hover:-translate-y-1 transition-all">
-        <HelpCircle class="w-5 h-5" /> Butuh Bantuan?
+      <button class="fixed bottom-4 right-4 md:bottom-8 md:right-8 px-4 py-2.5 md:px-6 md:py-3 bg-blue-600 text-white rounded-full font-bold flex items-center gap-2 md:gap-3 shadow-2xl shadow-blue-200 hover:-translate-y-1 transition-all text-sm md:text-base z-30">
+        <HelpCircle class="w-4 h-4 md:w-5 md:h-5" /> Butuh Bantuan?
       </button>
     </main>
   </div>
