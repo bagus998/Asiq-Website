@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { Sparkles, ArrowRight, Play } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 </script>
 
 <template>
@@ -33,7 +36,7 @@ import { Sparkles, ArrowRight, Play } from 'lucide-vue-next'
           </div>
 
           <div class="flex flex-col gap-4 sm:flex-row pt-4">
-            <button class="flex items-center justify-center gap-2 rounded-2xl bg-white px-8 py-4 font-black text-blue-700 shadow-2xl transition hover:bg-gray-100 hover:scale-105 active:scale-95">
+            <button @click="router.push('/login')" class="flex items-center justify-center gap-2 rounded-2xl bg-white px-8 py-4 font-black text-blue-700 shadow-2xl transition hover:bg-gray-100 hover:scale-105 active:scale-95">
               <span>Coba Gratis</span>
               <ArrowRight class="h-5 w-5" />
             </button>

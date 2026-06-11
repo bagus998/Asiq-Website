@@ -14,7 +14,10 @@ const recentRPP = ref({
   strengths: [] as Array<{ title: string; desc: string }>,
   resources: [] as Array<{ name: string; type: string; icon: any }>,
   pdf_url: null as string | null,
+  material_id: null as string | null,
 });
+
+const savedFormData = ref<any>(null);
 
 const isProcessing = ref(false);
 
@@ -62,13 +65,17 @@ export function useRppState() {
             // Simpan ke Supabase
             const { data: sessionData } = await supabase.auth.getSession();
             if (sessionData.session) {
-              await supabase.from("materials").insert({
+              const { data } = await supabase.from("materials").insert({
                 user_id: sessionData.session.user.id,
                 raw_content: formData.rawMaterial,
                 student_profile: formData.studentProfile,
                 readability_score: r.readability_score,
                 accessibility_score: r.wcag_score,
-              });
+              }).select();
+
+              if (data && data.length > 0) {
+                recentRPP.value.material_id = data[0].id;
+              }
             }
 
             isProcessing.value = false;
@@ -112,6 +119,7 @@ export function useRppState() {
     currentJobId,
     recentRPP,
     isProcessing,
+    savedFormData,
     processRPP,
     cleanup,
   };

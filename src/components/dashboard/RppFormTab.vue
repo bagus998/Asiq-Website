@@ -14,16 +14,16 @@ export interface RppFormData {
 }
 
 const router = useRouter()
-const { processRPP } = useRppState()
+const { processRPP, savedFormData } = useRppState()
 
 const rppStep = ref(1)
 
-const uploadedFile = ref<File | null>(null)
+const uploadedFile = ref<File | null>(savedFormData.value?.uploadedFile || null)
 const isDragging = ref(false)
-const studentProfile = ref('')
-const namaSiswa = ref('')
-const selectedJenjang = ref('')
-const selectedMataPelajaran = ref('')
+const studentProfile = ref(savedFormData.value?.studentProfile || '')
+const namaSiswa = ref(savedFormData.value?.namaSiswa || '')
+const selectedJenjang = ref(savedFormData.value?.selectedJenjang || '')
+const selectedMataPelajaran = ref(savedFormData.value?.selectedMataPelajaran || '')
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
 const allowedTypes = [
@@ -100,14 +100,19 @@ const handleSubmit = () => {
     alert('Mohon lengkapi File Materi, Nama Siswa, Jenjang, dan Mata Pelajaran terlebih dahulu.')
     return
   }
-  processRPP({
-    rawMaterial: '',
+
+  const formData: RppFormData = {
+    rawMaterial: 'Dummy raw text from file',
     uploadedFile: uploadedFile.value,
     namaSiswa: namaSiswa.value,
     selectedJenjang: selectedJenjang.value,
     selectedMataPelajaran: selectedMataPelajaran.value,
     studentProfile: studentProfile.value
-  }, router)
+  }
+
+  savedFormData.value = formData
+
+  processRPP(formData, router)
 }
 </script>
 

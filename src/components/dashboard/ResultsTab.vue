@@ -1,12 +1,55 @@
 <script setup lang="ts">
-import { CheckCircle2, PenTool, Download, Share2, Clock, BookOpen, Plus } from "lucide-vue-next";
+import { ref } from "vue";
+import { CheckCircle2, PenTool, Download, Share2, Clock, BookOpen, Plus, ThumbsUp, ThumbsDown, Send } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 import { marked } from "marked";
 import { downloadPDF } from "../../services/rppApi";
 import { useRppState } from "../../composables/useRppState";
+import { supabase } from "../../lib/supabase";
 
 const router = useRouter();
 const { recentRPP, currentJobId } = useRppState();
+
+const currentRating = ref<"up" | "down" | null>(null);
+const ratingReason = ref("");
+const ratingSubmitted = ref(false);
+const showReasonInput = ref(false);
+
+const submitRating = async (isPositive: boolean, reason: string) => {
+  try {
+    if (!recentRPP.value.material_id) return;
+    const { error } = await supabase
+      .from("materials")
+      .update({ rating: isPositive, rating_reason: reason })
+      .eq("id", recentRPP.value.material_id);
+    if (error) throw error;
+  } catch (e: any) {
+    console.error("Gagal mengirim rating:", e.message);
+  }
+};
+
+const handleRating = async (type: "up" | "down") => {
+  if (!recentRPP.value.material_id) {
+    alert("Material ID belum tersedia, tidak dapat memberikan rating.");
+    return;
+  }
+  
+  if (type === "up") {
+    currentRating.value = "up";
+    await submitRating(true, "");
+    ratingSubmitted.value = true;
+  } else {
+    currentRating.value = "down";
+    showReasonInput.value = true;
+  }
+};
+
+const submitNegativeRating = async () => {
+  if (!ratingReason.value) return;
+  await submitRating(false, ratingReason.value);
+  ratingSubmitted.value = true;
+  showReasonInput.value = false;
+};
 
 marked.setOptions({ breaks: true, gfm: true });
 
@@ -72,7 +115,7 @@ const handleDownload = async () => {
             <p class="text-slate-500 max-w-xl">{{ recentRPP.subText }}</p>
           </div>
           <div class="flex gap-3">
-            <button class="px-5 py-3 border-2 border-blue-100 rounded-xl text-blue-600 font-extrabold flex items-center gap-2 hover:bg-blue-50 transition-all"><PenTool class="w-4 h-4" /> Edit RPP</button>
+            <button @click="router.push('/dashboard/rpp')" class="px-5 py-3 border-2 border-blue-100 rounded-xl text-blue-600 font-extrabold flex items-center gap-2 hover:bg-blue-50 transition-all"><PenTool class="w-4 h-4" /> Edit RPP</button>
             <button @click="handleDownload" class="px-5 py-3 bg-blue-600 text-white rounded-xl font-extrabold flex items-center gap-2 hover:shadow-xl hover:shadow-blue-200 transition-all"><Download class="w-4 h-4" /> Unduh PDF</button>
             <button class="p-3 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all">
               <Share2 class="w-5 h-5 text-slate-600" />
@@ -156,9 +199,29 @@ const handleDownload = async () => {
       </div>
     </div>
 
-    <!-- Bottom Button -->
-    <div class="flex justify-start">
-      <button @click="router.push('/dashboard')" class="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black flex items-center gap-3 shadow-2xl shadow-blue-200"><Plus class="w-5 h-5" /> Buat Baru</button>
+    <!-- Evaluasi & Bottom Actions -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 p-8 bg-white border border-slate-200 rounded-3xl mt-8">
+      <div v-if="!ratingSubmitted && !showReasonInput" class="flex items-center gap-4">
+        <span class="font-bold text-slate-700">Bagaimana hasil adaptasi materi ini?</span>
+        <button @click="handleRating('up')" class="p-3 bg-white border border-slate-200 rounded-xl hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all group"><ThumbsUp class="w-5 h-5 text-slate-400 group-hover:text-emerald-500" /></button>
+        <button @click="handleRating('down')" class="p-3 bg-white border border-slate-200 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all group"><ThumbsDown class="w-5 h-5 text-slate-400 group-hover:text-red-500" /></button>
+      </div>
+
+      <div v-else-if="showReasonInput && !ratingSubmitted" class="flex-grow w-full max-w-xl flex flex-col gap-3">
+        <span class="font-bold text-slate-700">Mohon beritahu kami bagian mana yang perlu diperbaiki:</span>
+        <div class="flex gap-2">
+          <input v-model="ratingReason" type="text" placeholder="Alasan (contoh: RPP terlalu panjang)..." class="flex-grow px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 outline-none" />
+          <button @click="submitNegativeRating" class="px-5 py-3 bg-blue-600 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-blue-700"><Send class="w-4 h-4" /> Kirim</button>
+        </div>
+      </div>
+
+      <div v-else-if="ratingSubmitted" class="flex items-center gap-3 text-emerald-600 font-bold bg-emerald-50 px-6 py-3 rounded-xl border border-emerald-100">
+        <CheckCircle2 class="w-5 h-5" /> Terima kasih atas penilaian Anda!
+      </div>
+
+      <div class="ml-auto flex items-center">
+        <button @click="router.push('/dashboard')" class="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black flex items-center gap-3 shadow-2xl shadow-blue-200"><Plus class="w-5 h-5" /> Buat Baru</button>
+      </div>
     </div>
   </div>
 </template>
