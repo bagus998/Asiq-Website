@@ -2,7 +2,7 @@
 import { logoUrl } from "../../constants";
 import { LayoutDashboard, FolderOpen, GraduationCap, Users, Library, ChevronDown, Crown } from "lucide-vue-next";
 
-defineProps<{ activeMenu: string }>();
+defineProps<{ activeMenu: string; isSidebarOpen?: boolean }>();
 const emit = defineEmits(["navigate", "show-pricing"]);
 
 const pricingItems = ["Kursus AI", "Kelola Tim"];
@@ -27,7 +27,13 @@ const sidebarItems = [
 </script>
 
 <template>
-  <aside class="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0">
+  <aside 
+    :class="[
+      'w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 transition-transform duration-300 z-50',
+      'fixed inset-y-0 left-0 md:relative md:translate-x-0',
+      isSidebarOpen ? 'translate-x-0 shadow-2xl md:shadow-none' : '-translate-x-full'
+    ]"
+  >
     <!-- Logo -->
     <div class="p-6 pb-4 flex items-center gap-2">
       <img :src="logoUrl" alt="ASIQ Logo" class="h-9 w-auto" />
