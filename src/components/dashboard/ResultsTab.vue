@@ -12,7 +12,11 @@ marked.setOptions({ breaks: true, gfm: true });
 
 const md = (text: string) => {
   if (!text) return "";
-  return marked.parse(text) as string;
+  // Remove stray '**' alone on a line or at the beginning of the text
+  let cleanText = text.replace(/(^|\n)\s*\*\*\s*(?=\n|$)/g, '\n');
+  // Also clean up any leading newlines that might be left
+  cleanText = cleanText.trimStart();
+  return marked.parse(cleanText) as string;
 };
 
 const getConfidenceLabel = (score: number) => {
