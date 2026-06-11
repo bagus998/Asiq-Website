@@ -11,6 +11,8 @@ CREATE TABLE public.materials (
     accessibility_score INTEGER,
     strengths JSONB,
     resources JSONB,
+    rating BOOLEAN,
+    rating_reason TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -24,4 +26,8 @@ CREATE POLICY "Users can insert their own materials"
 
 CREATE POLICY "Users can view their own materials" 
     ON public.materials FOR SELECT 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own materials" 
+    ON public.materials FOR UPDATE 
     USING (auth.uid() = user_id);
