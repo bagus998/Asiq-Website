@@ -47,19 +47,18 @@ export function useRppState() {
           if (s === "completed" || s === "done" || s === "finished") {
             clearInterval(pollingInterval!);
             pollingInterval = null;
-            const r = await getResult(job.job_id);
+            
+            const scores = await getScores(job.job_id);
 
             recentRPP.value = {
-              title: `RPP Inklusif — ${r.nama_siswa}`,
-              subText: `${r.mata_pelajaran} · ${r.kelas}`,
-              readability: r.readability_score,
-              accessibility: r.wcag_score,
-              strengths: [
-                { title: "Profil Siswa", desc: r.profiling },
-                { title: "Strategi Adaptif", desc: r.adaptive },
-              ],
-              resources: [{ name: "Insight AI", type: r.insight, icon: "FileText" }],
-              pdf_url: r.pdf_url,
+              title: `RPP Inklusif — ${formData.namaSiswa}`,
+              subText: `${formData.selectedMataPelajaran} · ${formData.selectedJenjang}`,
+              readability: scores?.readability_score || 0,
+              accessibility: scores?.inclusivity_score || 0,
+              strengths: [],
+              resources: [],
+              pdf_url: job.job_id, // we save job_id here so we can download it later
+              material_id: null,
             };
 
             // Simpan ke Supabase
@@ -69,8 +68,14 @@ export function useRppState() {
                 user_id: sessionData.session.user.id,
                 raw_content: formData.rawMaterial,
                 student_profile: formData.studentProfile,
-                readability_score: r.readability_score,
-                accessibility_score: r.wcag_score,
+                readability_score: recentRPP.value.readability,
+                accessibility_score: recentRPP.value.accessibility,
+                nama_siswa: formData.namaSiswa,
+                kelas: formData.selectedJenjang,
+                mata_pelajaran: formData.selectedMataPelajaran,
+                pdf_url: job.job_id, // Save job_id into pdf_url column to identify PDF
+                strengths: [],
+                resources: [],
               }).select();
 
               if (data && data.length > 0) {
@@ -84,13 +89,7 @@ export function useRppState() {
             clearInterval(pollingInterval!);
             pollingInterval = null;
             isProcessing.value = false;
-            try {
-              // Ambil detail error dari API
-              const errResult = await getResult(job.job_id);
-              alert("Terjadi kesalahan saat memproses RPP:\n" + JSON.stringify(errResult, null, 2));
-            } catch (err: any) {
-              alert("Terjadi kesalahan saat memproses RPP:\n" + err.message);
-            }
+            alert("Terjadi kesalahan saat memproses RPP.");
             router.push("/dashboard/rpp");
           }
         } catch (e: any) {
@@ -108,6 +107,20 @@ export function useRppState() {
     }
   };
 
+  const loadFromHistory = (project: any, router: any) => {
+    recentRPP.value = {
+      title: `RPP Inklusif — ${project.nama_siswa || 'Siswa'}`,
+      subText: `${project.mata_pelajaran || 'Mata Pelajaran'} · ${project.kelas || 'Kelas'}`,
+      readability: project.readability_score || 0,
+      accessibility: project.accessibility_score || 0,
+      strengths: project.strengths || [],
+      resources: project.resources || [],
+      pdf_url: project.pdf_url || null,
+      material_id: project.id,
+    };
+    router.push("/dashboard/results");
+  };
+
   const cleanup = () => {
     if (pollingInterval) {
       clearInterval(pollingInterval);
@@ -121,6 +134,7 @@ export function useRppState() {
     isProcessing,
     savedFormData,
     processRPP,
+    loadFromHistory,
     cleanup,
   };
 }

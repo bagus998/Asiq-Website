@@ -79,25 +79,28 @@ const getConfidenceColor = (score: number) => {
 };
 
 const handleDownload = async () => {
-  if (recentRPP.value.pdf_url) {
-    const a = document.createElement("a");
-    a.href = recentRPP.value.pdf_url;
-    a.download = "RPP.pdf";
-    a.target = "_blank";
-    a.click();
+  const jobId = recentRPP.value.pdf_url || currentJobId.value;
+  if (!jobId) {
+    alert("PDF belum tersedia untuk RPP ini.");
     return;
   }
-  if (!currentJobId.value) return;
+  
+  // Jika jobId berbentuk URL (dari data lama), buka langsung
+  if (jobId.startsWith("http")) {
+    window.open(jobId, "_blank");
+    return;
+  }
+
   try {
-    const blob = await downloadPDF(currentJobId.value);
+    const blob = await downloadPDF(jobId);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "RPP.pdf";
+    a.download = `RPP_${recentRPP.value.title.replace("RPP Inklusif — ", "")}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   } catch (e: any) {
-    alert("Gagal download: " + e.message);
+    alert("Gagal mengunduh PDF: " + e.message);
   }
 };
 </script>
@@ -159,9 +162,9 @@ const handleDownload = async () => {
     </div>
 
     <!-- Kekuatan Utama & Sumber Belajar -->
-    <div class="grid lg:grid-cols-2 gap-8">
+    <div v-if="(recentRPP.strengths && recentRPP.strengths.length > 0) || (recentRPP.resources && recentRPP.resources.length > 0)" class="grid lg:grid-cols-2 gap-8">
       <!-- Kekuatan Utama -->
-      <div class="bg-white rounded-[2.5rem] p-10 border border-slate-200 space-y-8">
+      <div v-if="recentRPP.strengths && recentRPP.strengths.length > 0" class="bg-white rounded-[2.5rem] p-10 border border-slate-200 space-y-8">
         <div class="flex items-center gap-3 mb-4">
           <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600"><CheckCircle2 class="w-6 h-6" /></div>
           <h3 class="text-2xl font-black text-slate-900">Kekuatan Utama</h3>
@@ -180,7 +183,7 @@ const handleDownload = async () => {
       </div>
 
       <!-- Sumber Belajar Terkait -->
-      <div class="bg-white rounded-[2.5rem] p-10 border border-slate-200 space-y-8">
+      <div v-if="recentRPP.resources && recentRPP.resources.length > 0" class="bg-white rounded-[2.5rem] p-10 border border-slate-200 space-y-8">
         <div class="flex items-center gap-3 mb-4">
           <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600"><BookOpen class="w-6 h-6" /></div>
           <h3 class="text-2xl font-black text-slate-900">Sumber Belajar Terkait</h3>
