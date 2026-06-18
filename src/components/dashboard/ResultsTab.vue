@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { CheckCircle2, PenTool, Download, Share2, Clock, BookOpen, Plus, ThumbsUp, ThumbsDown, Send } from "lucide-vue-next";
+import { CheckCircle2, PenTool, Download, Share2, BookOpen, Plus, ThumbsUp, ThumbsDown, Send } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 import { marked } from "marked";
 import { downloadPDF } from "../../services/rppApi";
@@ -79,25 +79,28 @@ const getConfidenceColor = (score: number) => {
 };
 
 const handleDownload = async () => {
-  if (recentRPP.value.pdf_url) {
-    const a = document.createElement("a");
-    a.href = recentRPP.value.pdf_url;
-    a.download = "RPP.pdf";
-    a.target = "_blank";
-    a.click();
+  const jobId = recentRPP.value.pdf_url || currentJobId.value;
+  if (!jobId) {
+    alert("PDF belum tersedia untuk RPP ini.");
     return;
   }
-  if (!currentJobId.value) return;
+  
+  // Jika jobId berbentuk URL (dari data lama), buka langsung
+  if (jobId.startsWith("http")) {
+    window.open(jobId, "_blank");
+    return;
+  }
+
   try {
-    const blob = await downloadPDF(currentJobId.value);
+    const blob = await downloadPDF(jobId);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "RPP.pdf";
+    a.download = `RPP_${recentRPP.value.title.replace("RPP Inklusif — ", "")}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   } catch (e: any) {
-    alert("Gagal download: " + e.message);
+    alert("Gagal mengunduh PDF: " + e.message);
   }
 };
 </script>
@@ -159,9 +162,9 @@ const handleDownload = async () => {
     </div>
 
     <!-- Kekuatan Utama & Sumber Belajar -->
-    <div class="grid lg:grid-cols-2 gap-8">
+    <div v-if="(recentRPP.strengths && recentRPP.strengths.length > 0) || (recentRPP.resources && recentRPP.resources.length > 0)" class="grid lg:grid-cols-2 gap-8">
       <!-- Kekuatan Utama -->
-      <div class="bg-white rounded-[2.5rem] p-10 border border-slate-200 space-y-8">
+      <div v-if="recentRPP.strengths && recentRPP.strengths.length > 0" class="bg-white rounded-[2.5rem] p-10 border border-slate-200 space-y-8">
         <div class="flex items-center gap-3 mb-4">
           <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600"><CheckCircle2 class="w-6 h-6" /></div>
           <h3 class="text-2xl font-black text-slate-900">Kekuatan Utama</h3>
@@ -170,7 +173,7 @@ const handleDownload = async () => {
           <div v-for="item in recentRPP.strengths" :key="item.title">
             <div class="flex items-center gap-3 mb-3">
               <div class="w-8 h-8 rounded-full bg-blue-100 shrink-0 flex items-center justify-center text-blue-600">
-                <Clock class="w-4 h-4" />
+                <CheckCircle2 class="w-4 h-4" />
               </div>
               <h4 class="font-bold text-slate-900">{{ item.title }}</h4>
             </div>
@@ -180,20 +183,20 @@ const handleDownload = async () => {
       </div>
 
       <!-- Sumber Belajar Terkait -->
-      <div class="bg-white rounded-[2.5rem] p-10 border border-slate-200 space-y-8">
+      <div v-if="recentRPP.resources && recentRPP.resources.length > 0" class="bg-white rounded-[2.5rem] p-10 border border-slate-200 space-y-8">
         <div class="flex items-center gap-3 mb-4">
           <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600"><BookOpen class="w-6 h-6" /></div>
           <h3 class="text-2xl font-black text-slate-900">Sumber Belajar Terkait</h3>
         </div>
-        <div class="space-y-4">
-          <div v-for="res in recentRPP.resources" :key="res.name">
+        <div class="space-y-8">
+          <div v-for="res in recentRPP.resources" :key="res.title">
             <div class="flex items-center gap-3 mb-3">
               <div class="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 shrink-0">
                 <BookOpen class="w-4 h-4" />
               </div>
-              <h4 class="font-bold text-slate-900">{{ res.name }}</h4>
+              <h4 class="font-bold text-slate-900">{{ res.title }}</h4>
             </div>
-            <div class="prose-content" v-html="md(res.type)"></div>
+            <div class="prose-content" v-html="md(res.desc)"></div>
           </div>
         </div>
       </div>

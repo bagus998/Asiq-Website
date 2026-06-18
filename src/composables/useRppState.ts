@@ -1,20 +1,37 @@
 import { ref } from "vue";
 import { generateRPP, checkStatus, getResult } from "../services/rppApi";
-import { supabase } from "../lib/supabase";
+import { insertMaterial } from "../services/materialsService";
+
+export interface RppCard {
+  title: string;
+  desc: string;
+}
+
+interface RecentRPP {
+  title: string;
+  subText: string;
+  readability: number;
+  accessibility: number;
+  strengths: RppCard[];
+  resources: RppCard[];
+  pdf_url: string | null;
+  material_id: string | null;
+}
 
 // Shared state across RPP route pages
 const currentJobId = ref<string | null>(null);
-let pollingInterval: ReturnType<typeof setInterval> | null = null;
+const currentStep = ref<string>("");
+let pollingInterval: ReturnType<typeof setInterval> | undefined;
 
-const recentRPP = ref({
+const recentRPP = ref<RecentRPP>({
   title: "",
   subText: "",
   readability: 0,
   accessibility: 0,
-  strengths: [] as Array<{ title: string; desc: string }>,
-  resources: [] as Array<{ name: string; type: string; icon: any }>,
-  pdf_url: null as string | null,
-  material_id: null as string | null,
+  strengths: [],
+  resources: [],
+  pdf_url: null,
+  material_id: null,
 });
 
 const savedFormData = ref<any>(null);
@@ -44,58 +61,43 @@ export function useRppState() {
           const status = await checkStatus(job.job_id);
           const s = status.status.toLowerCase();
 
+          currentStep.value = status.step || "";
+
           if (s === "completed" || s === "done" || s === "finished") {
-            clearInterval(pollingInterval!);
-            pollingInterval = null;
-            const r = await getResult(job.job_id);
+            clearInterval(pollingInterval);
+            pollingInterval = undefined;
+            currentStep.value = "";
+
+            const result = await getResult(job.job_id);
 
             recentRPP.value = {
-              title: `RPP Inklusif — ${r.nama_siswa}`,
-              subText: `${r.mata_pelajaran} · ${r.kelas}`,
-              readability: r.readability_score,
-              accessibility: r.wcag_score,
-              strengths: [
-                { title: "Profil Siswa", desc: r.profiling },
-                { title: "Strategi Adaptif", desc: r.adaptive },
-              ],
-              resources: [{ name: "Insight AI", type: r.insight, icon: "FileText" }],
-              pdf_url: r.pdf_url,
+              title: `RPP Inklusif — ${result.nama_siswa}`,
+              subText: `${result.mata_pelajaran} · ${result.kelas}`,
+              readability: result.readability_score ?? 0,
+              accessibility: result.wcag_score ?? 0,
+              strengths: [{ title: "Profil Siswa", desc: result.profiling }],
+              resources: [{ title: "Insight AI", desc: result.insight }],
+              pdf_url: result.pdf_url ?? job.job_id,
+              material_id: null,
             };
 
-            // Simpan ke Supabase
-            const { data: sessionData } = await supabase.auth.getSession();
-            if (sessionData.session) {
-              const { data } = await supabase.from("materials").insert({
-                user_id: sessionData.session.user.id,
-                raw_content: formData.rawMaterial,
-                student_profile: formData.studentProfile,
-                readability_score: r.readability_score,
-                accessibility_score: r.wcag_score,
-              }).select();
-
-              if (data && data.length > 0) {
-                recentRPP.value.material_id = data[0].id;
-              }
+            const materialId = await insertMaterial(result, formData.rawMaterial ?? '');
+            if (materialId) {
+              recentRPP.value.material_id = materialId;
             }
 
             isProcessing.value = false;
             router.push("/dashboard/results");
           } else if (s === "failed" || s === "error") {
-            clearInterval(pollingInterval!);
-            pollingInterval = null;
+            clearInterval(pollingInterval);
+            pollingInterval = undefined;
             isProcessing.value = false;
-            try {
-              // Ambil detail error dari API
-              const errResult = await getResult(job.job_id);
-              alert("Terjadi kesalahan saat memproses RPP:\n" + JSON.stringify(errResult, null, 2));
-            } catch (err: any) {
-              alert("Terjadi kesalahan saat memproses RPP:\n" + err.message);
-            }
+            alert("Terjadi kesalahan saat memproses RPP.");
             router.push("/dashboard/rpp");
           }
         } catch (e: any) {
-          clearInterval(pollingInterval!);
-          pollingInterval = null;
+          clearInterval(pollingInterval);
+          pollingInterval = undefined;
           isProcessing.value = false;
           alert("Error: " + e.message);
           router.push("/dashboard/rpp");
@@ -108,19 +110,35 @@ export function useRppState() {
     }
   };
 
+  const loadFromHistory = (project: any, router: any) => {
+    recentRPP.value = {
+      title: `RPP Inklusif — ${project.nama_siswa || 'Siswa'}`,
+      subText: `${project.mata_pelajaran || 'Mata Pelajaran'} · ${project.kelas || 'Kelas'}`,
+      readability: project.readability_score || 0,
+      accessibility: project.accessibility_score || 0,
+      strengths: project.strengths || [],
+      resources: project.resources || [],
+      pdf_url: project.pdf_url || null,
+      material_id: project.id,
+    };
+    router.push("/dashboard/results");
+  };
+
   const cleanup = () => {
-    if (pollingInterval) {
+    if (pollingInterval !== undefined) {
       clearInterval(pollingInterval);
-      pollingInterval = null;
+      pollingInterval = undefined;
     }
   };
 
   return {
     currentJobId,
+    currentStep,
     recentRPP,
     isProcessing,
     savedFormData,
     processRPP,
+    loadFromHistory,
     cleanup,
   };
 }

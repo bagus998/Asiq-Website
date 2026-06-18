@@ -39,21 +39,22 @@ export interface RPPResultResponse {
   finished_at: string;
 }
 
-// multipart/form-data — jangan set Content-Type manual, browser yang set boundary
+// Server expects multipart/form-data — do NOT send JSON
 export async function generateRPP(data: RPPGenerateRequest, file?: File | null): Promise<RPPJobResponse> {
-  const body = new FormData();
-  body.append("nama_siswa", data.nama_siswa);
-  body.append("kelas", data.kelas);
-  body.append("mata_pelajaran", data.mata_pelajaran);
-  body.append("gejala", data.gejala);
-  if (data.materi_mentah) body.append("materi_mentah", data.materi_mentah);
-  if (file) body.append("file", file);
+  const form = new FormData();
+  form.append("nama_siswa", data.nama_siswa);
+  form.append("kelas", data.kelas);
+  form.append("mata_pelajaran", data.mata_pelajaran);
+  form.append("gejala", data.gejala);
+  if (data.materi_mentah) form.append("materi_mentah", data.materi_mentah);
+  if (file) form.append("file", file);
 
   const res = await fetch(`${BASE_URL}/api/rpp/generate`, {
     method: "POST",
-    headers: apiHeaders(),
-    body,
+    headers: apiHeaders(), // Content-Type omitted — browser sets multipart boundary automatically
+    body: form,
   });
+
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Gagal generate RPP (${res.status}): ${text}`);
@@ -79,16 +80,7 @@ export async function getResult(jobId: string): Promise<RPPResultResponse> {
       "Cache-Control": "no-cache",
     },
   });
-  if (!res.ok) {
-    let errMsg = `Ambil hasil gagal: ${res.status}`;
-    try {
-      const errJson = await res.json();
-      if (errJson && errJson.detail) {
-        errMsg = errJson.detail;
-      }
-    } catch (_) {}
-    throw new Error(errMsg);
-  }
+  if (!res.ok) throw new Error(`Gagal mengambil hasil: ${res.status}`);
   return res.json();
 }
 
