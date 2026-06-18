@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { Zap, GraduationCap, Search, FileText, Check } from 'lucide-vue-next'
+import { useRppState } from '../../composables/useRppState'
 
-defineProps<{
-  currentStep?: string
-}>()
+const { currentStep } = useRppState()
 </script>
 
 <template>

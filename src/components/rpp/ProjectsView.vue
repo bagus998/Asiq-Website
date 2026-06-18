@@ -43,20 +43,27 @@ const formatDate = (dateString: string) => {
 
 import { downloadPDF } from "../../services/rppApi";
 
-const openPdf = async (e: Event, jobId: string) => {
+const isValidJobId = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+const openPdf = async (e: Event, pdfUrl: string) => {
   e.stopPropagation();
-  if (!jobId) {
+  if (!pdfUrl) {
     alert("PDF belum tersedia untuk RPP ini.");
     return;
   }
-  
-  if (jobId.startsWith("http")) {
-    window.open(jobId, "_blank");
+
+  if (pdfUrl.startsWith("http")) {
+    window.open(pdfUrl, "_blank");
+    return;
+  }
+
+  if (!isValidJobId(pdfUrl)) {
+    alert("PDF belum tersedia untuk RPP ini.");
     return;
   }
 
   try {
-    const blob = await downloadPDF(jobId);
+    const blob = await downloadPDF(pdfUrl);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;

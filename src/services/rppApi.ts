@@ -39,42 +39,22 @@ export interface RPPResultResponse {
   finished_at: string;
 }
 
-// multipart/form-data dihapus, kirim JSON sesuai spec backend
+// Server expects multipart/form-data — do NOT send JSON
 export async function generateRPP(data: RPPGenerateRequest, file?: File | null): Promise<RPPJobResponse> {
-  let materi_pdf = data.materi_mentah || "";
-  
-  if (file) {
-    const toBase64 = (f: File) => new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(f);
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64 = result.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = error => reject(error);
-    });
-    materi_pdf = await toBase64(file);
-  }
+  const form = new FormData();
+  form.append("nama_siswa", data.nama_siswa);
+  form.append("kelas", data.kelas);
+  form.append("mata_pelajaran", data.mata_pelajaran);
+  form.append("gejala", data.gejala);
+  if (data.materi_mentah) form.append("materi_mentah", data.materi_mentah);
+  if (file) form.append("file", file);
 
-  const payload = {
-    nama_siswa: data.nama_siswa,
-    diagnosis: data.gejala, // Backend expects 'diagnosis'
-    mata_pelajaran: data.mata_pelajaran,
-    kelas: data.kelas,
-    gejala: data.gejala,
-    materi_pdf: materi_pdf
-  };
-
-  const res = await fetch(`${BASE_URL}/api/generate`, {
+  const res = await fetch(`${BASE_URL}/api/rpp/generate`, {
     method: "POST",
-    headers: {
-      ...apiHeaders(),
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload),
+    headers: apiHeaders(), // Content-Type omitted — browser sets multipart boundary automatically
+    body: form,
   });
-  
+
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Gagal generate RPP (${res.status}): ${text}`);
@@ -83,7 +63,7 @@ export async function generateRPP(data: RPPGenerateRequest, file?: File | null):
 }
 
 export async function checkStatus(jobId: string): Promise<RPPStatusResponse> {
-  const res = await fetch(`${BASE_URL}/api/status/${jobId}?t=${Date.now()}`, {
+  const res = await fetch(`${BASE_URL}/api/rpp/status/${jobId}?t=${Date.now()}`, {
     headers: {
       ...apiHeaders(),
       "Cache-Control": "no-cache",
@@ -93,24 +73,19 @@ export async function checkStatus(jobId: string): Promise<RPPStatusResponse> {
   return res.json();
 }
 
-export async function getScores(jobId: string): Promise<{ readability_score?: number, inclusivity_score?: number } | null> {
-  try {
-    const res = await fetch(`${BASE_URL}/api/result/${jobId}/scores?t=${Date.now()}`, {
-      headers: {
-        ...apiHeaders(),
-        "Cache-Control": "no-cache",
-      },
-    });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch (e) {
-    console.warn("Gagal mengambil skor, melanjutkan tanpa skor:", e);
-    return null;
-  }
+export async function getResult(jobId: string): Promise<RPPResultResponse> {
+  const res = await fetch(`${BASE_URL}/api/rpp/result/${jobId}?t=${Date.now()}`, {
+    headers: {
+      ...apiHeaders(),
+      "Cache-Control": "no-cache",
+    },
+  });
+  if (!res.ok) throw new Error(`Gagal mengambil hasil: ${res.status}`);
+  return res.json();
 }
 
 export async function downloadPDF(jobId: string): Promise<Blob> {
-  const res = await fetch(`${BASE_URL}/api/result/${jobId}/pdf`, {
+  const res = await fetch(`${BASE_URL}/api/rpp/download/${jobId}`, {
     headers: apiHeaders(),
   });
   if (!res.ok) throw new Error(`Download gagal: ${res.status}`);

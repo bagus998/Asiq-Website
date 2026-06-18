@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { CheckCircle2, PenTool, Download, Share2, Clock, BookOpen, Plus, ThumbsUp, ThumbsDown, Send } from "lucide-vue-next";
+import { CheckCircle2, PenTool, Download, Share2, BookOpen, Plus, ThumbsUp, ThumbsDown, Send } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 import { marked } from "marked";
 import { downloadPDF } from "../../services/rppApi";
@@ -173,7 +173,7 @@ const handleDownload = async () => {
           <div v-for="item in recentRPP.strengths" :key="item.title">
             <div class="flex items-center gap-3 mb-3">
               <div class="w-8 h-8 rounded-full bg-blue-100 shrink-0 flex items-center justify-center text-blue-600">
-                <Clock class="w-4 h-4" />
+                <CheckCircle2 class="w-4 h-4" />
               </div>
               <h4 class="font-bold text-slate-900">{{ item.title }}</h4>
             </div>
@@ -188,15 +188,15 @@ const handleDownload = async () => {
           <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600"><BookOpen class="w-6 h-6" /></div>
           <h3 class="text-2xl font-black text-slate-900">Sumber Belajar Terkait</h3>
         </div>
-        <div class="space-y-4">
-          <div v-for="res in recentRPP.resources" :key="res.name">
+        <div class="space-y-8">
+          <div v-for="res in recentRPP.resources" :key="res.title">
             <div class="flex items-center gap-3 mb-3">
               <div class="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 shrink-0">
                 <BookOpen class="w-4 h-4" />
               </div>
-              <h4 class="font-bold text-slate-900">{{ res.name }}</h4>
+              <h4 class="font-bold text-slate-900">{{ res.title }}</h4>
             </div>
-            <div class="prose-content" v-html="md(res.type)"></div>
+            <div class="prose-content" v-html="md(res.desc)"></div>
           </div>
         </div>
       </div>
